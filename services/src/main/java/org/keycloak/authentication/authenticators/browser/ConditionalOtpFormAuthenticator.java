@@ -107,13 +107,12 @@ public class ConditionalOtpFormAuthenticator extends OTPFormAuthenticator {
     public void authenticate(AuthenticationFlowContext context) {
 
         Map<String, String> config = context.getAuthenticatorConfig().getConfig();
-        MultivaluedMap<String, String> requestHeaders = session.getContext().getRequestHeaders().getRequestHeaders();
 
         if (tryConcludeBasedOn(voteForUserOtpControlAttribute(context.getUser(), config), context)) {
             return;
         }
 
-        if (tryConcludeBasedOn(voteForUserRole(requestHeaders, context.getRealm(), context.getUser(), config), context)) {
+        if (tryConcludeBasedOn(voteForUserRole(context.getHttpRequest().getHttpHeaders().getRequestHeaders(), context.getRealm(), context.getUser(), config), context)) {
             return;
         }
 
