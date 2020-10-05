@@ -107,12 +107,13 @@ public class ConditionalOtpFormAuthenticator extends OTPFormAuthenticator {
     public void authenticate(AuthenticationFlowContext context) {
 
         Map<String, String> config = context.getAuthenticatorConfig().getConfig();
+        MultivaluedMap<String, String> requestHeaders = session.getContext().getRequestHeaders().getRequestHeaders();
 
         if (tryConcludeBasedOn(voteForUserOtpControlAttribute(context.getUser(), config), context)) {
             return;
         }
 
-        if (tryConcludeBasedOn(voteForUserRole(context.getRealm(), context.getUser(), config), context)) {
+        if (tryConcludeBasedOn(voteForUserRole(requestHeaders, context.getRealm(), context.getUser(), config), context)) {
             return;
         }
 
@@ -255,7 +256,7 @@ public class ConditionalOtpFormAuthenticator extends OTPFormAuthenticator {
         return false;
     }
 
-    private OtpDecision voteForUserRole(RealmModel realm, UserModel user, Map<String, String> config) {
+    private OtpDecision voteForUserRole(MultivaluedMap<String, String> requestHeaders, RealmModel realm, UserModel user, Map<String, String> config) {
 
         if (!config.containsKey(SKIP_OTP_ROLE) && !config.containsKey(FORCE_OTP_ROLE)) {
             return ABSTAIN;
@@ -266,6 +267,9 @@ public class ConditionalOtpFormAuthenticator extends OTPFormAuthenticator {
         }
 
         if (userHasRole(realm, user, config.get(FORCE_OTP_ROLE))) {
+            if (containsMatchingRequestHeader(requestHeaders, config.get(SKIP_OTP_FOR_HTTP_HEADER))) {
+                return SKIP_OTP;
+            }
             return SHOW_OTP;
         }
 
@@ -292,7 +296,7 @@ public class ConditionalOtpFormAuthenticator extends OTPFormAuthenticator {
             if (tryConcludeBasedOn(voteForUserOtpControlAttribute(user, configModel.getConfig()))) {
                 return true;
             }
-            if (tryConcludeBasedOn(voteForUserRole(realm, user, configModel.getConfig()))) {
+            if (tryConcludeBasedOn(voteForUserRole(requestHeaders, realm, user, configModel.getConfig()))) {
                 return true;
             }
             if (tryConcludeBasedOn(voteForHttpHeaderMatchesPattern(requestHeaders, configModel.getConfig()))) {
@@ -305,7 +309,7 @@ public class ConditionalOtpFormAuthenticator extends OTPFormAuthenticator {
             }
             if (containsConditionalOtpConfig(configModel.getConfig())
                 && voteForUserOtpControlAttribute(user, configModel.getConfig()) == ABSTAIN
-                && voteForUserRole(realm, user, configModel.getConfig()) == ABSTAIN
+                && voteForUserRole(requestHeaders, realm, user, configModel.getConfig()) == ABSTAIN
                 && voteForHttpHeaderMatchesPattern(requestHeaders, configModel.getConfig()) == ABSTAIN
                 && (voteForDefaultFallback(configModel.getConfig()) == SHOW_OTP
                     || voteForDefaultFallback(configModel.getConfig()) == ABSTAIN)) {
